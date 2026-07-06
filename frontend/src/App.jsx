@@ -1,10 +1,16 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet, Navigate, Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { ShoppingCart, Bell, User, LogOut, LayoutDashboard, ExternalLink } from 'lucide-react';
 import { useAuthStore } from './stores/useAuthStore';
 import LoginPage from './pages/portal/LoginPage';
 import HomePage from './pages/portal/HomePage';
 import AuthModal from './components/AuthModal';
+import CartPage from './pages/portal/CartPage';
+import CheckoutPage from './pages/portal/CheckoutPage';
+import AdminNotifications from './pages/admin/AdminNotifications';
+import { useCartStore } from './stores/useCartStore';
+import { adminService } from './services';
 
 // ─── Auth Guards ──────────────────────────────────────────────
 const AdminRoute = ({ children }) => {
@@ -16,6 +22,7 @@ const AdminRoute = ({ children }) => {
 // ─── Portal Layout (customer-facing) ─────────────────────────
 const PortalLayout = () => {
   const { isAuthenticated, fullName, logout } = useAuthStore();
+  const { getItemCount } = useCartStore();
   const [showAuthModal, setShowAuthModal] = React.useState(false);
 
   return (
@@ -47,10 +54,14 @@ const PortalLayout = () => {
           {/* Right actions */}
           <div className="flex items-center gap-2">
             {/* Cart */}
-            <button className="relative w-9 h-9 rounded-xl bg-gray-50 shadow-[2px_2px_5px_#d1d9e6,-1px_-1px_4px_#ffffff] flex items-center justify-center hover:bg-blue-50 transition">
+            <Link to="/cart" className="relative w-9 h-9 rounded-xl bg-gray-50 shadow-[2px_2px_5px_#d1d9e6,-1px_-1px_4px_#ffffff] flex items-center justify-center hover:bg-blue-50 transition">
               <ShoppingCart className="w-4 h-4 text-gray-600" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">0</span>
-            </button>
+              {getItemCount() > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {getItemCount()}
+                </span>
+              )}
+            </Link>
 
             {isAuthenticated ? (
               <div className="flex items-center gap-2">
@@ -108,6 +119,15 @@ const NAV_ITEMS = [
 
 const AdminLayout = () => {
   const { fullName, logout } = useAuthStore();
+  
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['adminNotifications'],
+    queryFn: adminService.getNotifications,
+    refetchInterval: 60000, // 60s
+  });
+  
+  const unreadCount = notifications.filter(n => !n.read).length;
+
   return (
     <div className="min-h-screen flex bg-[#f0f2f5]">
       {/* Sidebar */}
@@ -161,10 +181,14 @@ const AdminLayout = () => {
               <input type="text" placeholder="Search (Ctrl+K)" className="w-48 md:w-64 pl-9 pr-4 py-2 rounded-xl bg-gray-50 shadow-[inset_2px_2px_5px_#d1d9e6] text-sm outline-none focus:ring-2 focus:ring-blue-400" />
               <svg className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             </div>
-            <button className="relative w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center hover:bg-blue-50 transition">
+            <Link to="/admin/notifications" className="relative w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center hover:bg-blue-50 transition">
               <Bell className="w-4 h-4 text-gray-500" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">3</span>
-            </button>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </Link>
             <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow text-white text-sm font-bold">
               {fullName?.[0] || 'A'}
             </div>
@@ -179,25 +203,43 @@ const AdminLayout = () => {
 };
 
 // ─── Placeholder Admin Dashboard ──────────────────────────────
-const AdminDashboard = () => (
-  <div>
-    <h2 className="text-2xl font-bold mb-6 text-gray-800">Dashboard Overview</h2>
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      {[
-        ["Today's Revenue", "₹0", "blue"],
-        ["Orders Today", "0", "emerald"],
-        ["Low Stock", "0", "amber"],
-        ["Customers", "0", "violet"],
-      ].map(([label, val, color]) => (
-        <div key={label} className={`bg-${color}-50 border border-${color}-100 rounded-2xl p-5 shadow-[inset_3px_3px_6px_#d1d9e6]`}>
-          <p className={`text-xs font-semibold text-${color}-500 uppercase tracking-wide`}>{label}</p>
-          <p className={`text-2xl font-bold text-${color}-700 mt-1`}>{val}</p>
+const AdminDashboard = () => {
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: async () => {
+      const res = await fetch('/api/method/hospital_pharmacy.api.get_dashboard_data');
+      const data = await res.json();
+      return data.message;
+    }
+  });
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">Dashboard Overview</h2>
+      
+      {isLoading ? (
+        <div className="text-gray-500">Loading live stats...</div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+          {[
+            ["Today's Revenue", `₹${stats?.sales_today?.toFixed(2) || '0.00'}`, "blue"],
+            ["Pending Orders", stats?.pending_orders || 0, "amber"],
+            ["Completed Invoices", stats?.total_invoices || 0, "emerald"],
+            ["Low Stock Items", stats?.low_stock || 0, "red"],
+            ["Near Expiry", stats?.near_expiry || 0, "orange"],
+            ["Total Customers", stats?.total_customers || 0, "violet"],
+          ].map(([label, val, color]) => (
+            <div key={label} className={`bg-${color}-50 border border-${color}-100 rounded-2xl p-5 shadow-[inset_3px_3px_6px_#d1d9e6]`}>
+              <p className={`text-xs font-semibold text-${color}-500 uppercase tracking-wide`}>{label}</p>
+              <p className={`text-2xl font-bold text-${color}-700 mt-1`}>{val}</p>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
+      <p className="text-gray-400 text-sm">Showing live data synced with ERPNext fulfillment records.</p>
     </div>
-    <p className="text-gray-400 text-sm">Connect the backend API to populate live data.</p>
-  </div>
-);
+  );
+};
 
 // ─── App ──────────────────────────────────────────────────────
 export default function App() {
@@ -208,6 +250,8 @@ export default function App() {
         <Route path="/" element={<PortalLayout />}>
           <Route index element={<HomePage />} />
           <Route path="medicines" element={<HomePage />} />
+          <Route path="cart" element={<CartPage />} />
+          <Route path="checkout" element={<CheckoutPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
 
@@ -218,6 +262,7 @@ export default function App() {
         {/* Admin Portal */}
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
+          <Route path="notifications" element={<AdminNotifications />} />
           <Route path="*" element={<div className="text-gray-400 text-center py-16">Module coming soon…</div>} />
         </Route>
       </Routes>

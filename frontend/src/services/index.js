@@ -22,6 +22,9 @@ export const authService = {
 export const adminService = {
   getDashboardData: () => callMethod('hospital_pharmacy.api.get_dashboard_data'),
   searchEverything: (query) => callMethod('hospital_pharmacy.api.search_everything', { query }),
+  getNotifications: () => callMethod('hospital_pharmacy.api.get_admin_notifications'),
+  markNotificationRead: (name) => callMethod('hospital_pharmacy.api.mark_notification_read', { name }),
+  markAllNotificationsRead: () => callMethod('hospital_pharmacy.api.mark_all_notifications_read'),
 };
 
 export { parseFrappeError };

@@ -9,6 +9,8 @@ import { medicineService, parseFrappeError } from '../../services';
 import { ClayCard, Button, Select, Skeleton, StatusBadge } from '../../components/ui';
 import AuthModal from '../../components/AuthModal';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useCartStore } from '../../stores/useCartStore';
+import { useNavigate } from 'react-router-dom';
 
 // ─── KPI card ─────────────────────────────────────────────────
 const kpiConfig = [
@@ -42,7 +44,7 @@ const stockStatus = (qty) => {
 const PLACEHOLDER_IMG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Crect width='160' height='160' fill='%23f1f5f9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='40' fill='%2394a3b8'%3E💊%3C/text%3E%3C/svg%3E";
 
 function MedicineCard({ medicine, onBuyNow }) {
-  const status = stockStatus(medicine.current_stock);
+  const status = stockStatus(medicine.actual_qty);
   return (
     <motion.div
       layout
@@ -158,6 +160,8 @@ function CategoryPill({ label, active, onClick }) {
 // ─── Main HomePage ────────────────────────────────────────────
 export default function HomePage() {
   const { isAuthenticated } = useAuthStore();
+  const { addItem } = useCartStore();
+  const navigate = useNavigate();
   const [authModal, setAuthModal] = useState({ open: false, pendingMedicine: null });
   const [filters, setFilters] = useState({
     search: '', category: '', brand: '', availability: '', sort: 'name', page: 1,
@@ -203,15 +207,16 @@ export default function HomePage() {
     if (!isAuthenticated) {
       setAuthModal({ open: true, pendingMedicine: medicine });
     } else {
-      // TODO: add to cart / proceed to purchase
-      alert(`Added ${medicine.medicine_name} to cart! (cart integration coming next)`);
+      addItem(medicine);
+      navigate('/cart');
     }
   };
 
   const onAuthSuccess = () => {
     if (authModal.pendingMedicine) {
-      alert(`Added ${authModal.pendingMedicine.medicine_name} to cart!`);
+      addItem(authModal.pendingMedicine);
       setAuthModal({ open: false, pendingMedicine: null });
+      navigate('/cart');
     }
   };
 

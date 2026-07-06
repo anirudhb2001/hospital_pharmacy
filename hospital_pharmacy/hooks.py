@@ -148,23 +148,12 @@ app_license = "mit"
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"hospital_pharmacy.tasks.all"
-# 	],
-# 	"daily": [
-# 		"hospital_pharmacy.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"hospital_pharmacy.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"hospital_pharmacy.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"hospital_pharmacy.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"daily": [
+		"hospital_pharmacy.tasks.check_expiry",
+		"hospital_pharmacy.tasks.check_low_stock"
+	]
+}
 
 # Testing
 # -------
@@ -247,3 +236,5 @@ app_license = "mit"
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
 
+
+website_route_rules = [{'from_route': '/frontend/<path:app_path>', 'to_route': 'frontend'},]

@@ -1,82 +1,176 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Outlet, Navigate, Link } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Outlet, Navigate, Link, useNavigate } from 'react-router-dom';
+import { ShoppingCart, Bell, User, LogOut, LayoutDashboard, ExternalLink } from 'lucide-react';
 import { useAuthStore } from './stores/useAuthStore';
-import { api } from './api';
 import LoginPage from './pages/portal/LoginPage';
+import HomePage from './pages/portal/HomePage';
+import AuthModal from './components/AuthModal';
 
-// Reusable Admin Guard
+// ─── Auth Guards ──────────────────────────────────────────────
 const AdminRoute = ({ children }) => {
-  const { isAuthenticated, user } = useAuthStore();
-  // Ensure the user is authenticated and is an admin role (we can check roles here if stored in state)
+  const { isAuthenticated, isAdmin } = useAuthStore();
   if (!isAuthenticated) return <Navigate to="/admin/login" replace />;
   return children;
 };
 
-// Layouts
+// ─── Portal Layout (customer-facing) ─────────────────────────
 const PortalLayout = () => {
-  const { isAuthenticated, logout } = useAuthStore();
+  const { isAuthenticated, fullName, logout } = useAuthStore();
+  const [showAuthModal, setShowAuthModal] = React.useState(false);
+
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-clay p-4 flex justify-between items-center rounded-b-2xl mb-8 border border-white">
-        <h1 className="text-xl font-bold text-primary ml-4">Hospital Pharmacy</h1>
-        <nav className="flex items-center space-x-6 mr-4">
-          <Link to="/" className="text-gray-600 hover:text-primary font-medium transition">Home</Link>
-          <Link to="/medicines" className="text-gray-600 hover:text-primary font-medium transition">Catalog</Link>
-          {isAuthenticated ? (
-            <>
-              <Link to="/profile" className="text-gray-600 hover:text-primary font-medium transition">Profile</Link>
-              <button onClick={logout} className="text-danger font-medium hover:opacity-80 transition">Logout</button>
-            </>
-          ) : (
-            <Link to="/login" className="bg-primary text-white px-5 py-2 rounded-xl font-medium shadow-clay hover:-translate-y-0.5 transition">Login</Link>
-          )}
-        </nav>
+    <div className="min-h-screen flex flex-col bg-[#f0f2f5]">
+      {/* ── Navbar ── */}
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-lg border-b border-white shadow-[0_2px_12px_#d1d9e620]">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-4">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2 shrink-0">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow">
+              <span className="text-white text-xs font-bold">Rx</span>
+            </div>
+            <span className="font-bold text-gray-900 text-lg hidden sm:block">Hospital Pharmacy</span>
+          </Link>
+
+          {/* Nav links */}
+          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
+            <Link to="/" className="hover:text-blue-600 transition">Home</Link>
+            <Link to="/medicines" className="hover:text-blue-600 transition">Medicines</Link>
+            {isAuthenticated && (
+              <>
+                <Link to="/orders" className="hover:text-blue-600 transition">My Orders</Link>
+                <Link to="/profile" className="hover:text-blue-600 transition">Profile</Link>
+              </>
+            )}
+            <Link to="/admin/login" className="hover:text-blue-600 transition text-gray-400">Admin</Link>
+          </nav>
+
+          {/* Right actions */}
+          <div className="flex items-center gap-2">
+            {/* Cart */}
+            <button className="relative w-9 h-9 rounded-xl bg-gray-50 shadow-[2px_2px_5px_#d1d9e6,-1px_-1px_4px_#ffffff] flex items-center justify-center hover:bg-blue-50 transition">
+              <ShoppingCart className="w-4 h-4 text-gray-600" />
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">0</span>
+            </button>
+
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-xl">
+                  <User className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="text-sm font-semibold text-blue-700 max-w-[120px] truncate">{fullName}</span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center hover:bg-red-100 transition"
+                  title="Logout"
+                >
+                  <LogOut className="w-4 h-4 text-red-500" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl shadow-[3px_3px_6px_#2563eb44] hover:bg-blue-700 hover:-translate-y-0.5 transition-all"
+              >
+                Login / Register
+              </button>
+            )}
+          </div>
+        </div>
       </header>
-      <main className="flex-grow container mx-auto px-4 max-w-7xl">
+
+      {/* ── Main Content ── */}
+      <main className="flex-grow max-w-7xl w-full mx-auto px-4 md:px-6 py-6">
         <Outlet />
       </main>
-      <footer className="mt-12 py-8 text-center text-gray-500 text-sm">
-        &copy; 2026 Hospital Pharmacy. All Rights Reserved.
+
+      {/* ── Footer ── */}
+      <footer className="bg-white border-t border-gray-100 mt-8">
+        <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-gray-500">
+          <span>© 2026 Hospital Pharmacy. All rights reserved.</span>
+          <div className="flex gap-4">
+            <Link to="/" className="hover:text-blue-600 transition">Home</Link>
+            <Link to="/medicines" className="hover:text-blue-600 transition">Medicines</Link>
+            <Link to="/admin/login" className="hover:text-blue-600 transition">Staff Portal</Link>
+          </div>
+        </div>
       </footer>
+
+      {/* Auth modal */}
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );
 };
 
+// ─── Admin Layout ─────────────────────────────────────────────
+const NAV_ITEMS = [
+  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+];
+
 const AdminLayout = () => {
-  const { logout } = useAuthStore();
+  const { fullName, logout } = useAuthStore();
   return (
-    <div className="min-h-screen flex bg-background">
-      <aside className="w-64 bg-white m-4 rounded-2xl shadow-clay flex flex-col hidden md:flex border border-white">
-        <div className="p-6 text-xl font-bold text-gray-800 border-b border-gray-100">Admin Portal</div>
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          <Link to="/admin" className="block px-4 py-2.5 rounded-xl text-gray-700 hover:bg-gray-50 hover:text-primary transition font-medium">Dashboard</Link>
-          <Link to="/admin/medicines" className="block px-4 py-2.5 rounded-xl text-gray-700 hover:bg-gray-50 hover:text-primary transition font-medium">Medicines</Link>
-          <Link to="/admin/inventory" className="block px-4 py-2.5 rounded-xl text-gray-700 hover:bg-gray-50 hover:text-primary transition font-medium">Inventory</Link>
-          <Link to="/admin/sales" className="block px-4 py-2.5 rounded-xl text-gray-700 hover:bg-gray-50 hover:text-primary transition font-medium">Sales & Orders</Link>
-          <Link to="/admin/analytics" className="block px-4 py-2.5 rounded-xl text-gray-700 hover:bg-gray-50 hover:text-primary transition font-medium">Analytics</Link>
-          
-          <div className="mt-8 pt-4 border-t border-gray-100">
-             <a href="/app" target="_blank" rel="noreferrer" className="block px-4 py-2.5 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 transition font-medium">Open ERP Desk ↗</a>
+    <div className="min-h-screen flex bg-[#f0f2f5]">
+      {/* Sidebar */}
+      <aside className="w-64 shrink-0 hidden md:flex flex-col m-4 mr-0 bg-white rounded-2xl shadow-[6px_6px_12px_#d1d9e6,-4px_-4px_10px_#ffffff] border border-white/60 overflow-hidden">
+        <div className="p-6 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow"><span className="text-white text-xs font-bold">Rx</span></div>
+            <span className="font-bold text-gray-800">Admin Portal</span>
+          </div>
+          {fullName && <p className="text-xs text-gray-400 mt-1 truncate">{fullName}</p>}
+        </div>
+        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto text-sm">
+          {[
+            ['Dashboard', '/admin', '📊'],
+            ['Medicines', '/admin/medicines', '💊'],
+            ['Inventory', '/admin/inventory', '📦'],
+            ['Sales', '/admin/sales', '🧾'],
+            ['Purchases', '/admin/purchases', '🛒'],
+            ['Payments', '/admin/payments', '💳'],
+            ['Customers', '/admin/customers', '👥'],
+            ['Suppliers', '/admin/suppliers', '🏭'],
+            ['Analytics', '/admin/analytics', '📈'],
+            ['Reports', '/admin/reports', '📋'],
+            ['Notifications', '/admin/notifications', '🔔'],
+            ['Users', '/admin/users', '👤'],
+            ['Settings', '/admin/settings', '⚙️'],
+          ].map(([label, to, emoji]) => (
+            <Link key={to} to={to} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-gray-600 hover:bg-blue-50 hover:text-blue-700 font-medium transition-all">
+              <span>{emoji}</span> {label}
+            </Link>
+          ))}
+          <div className="pt-3 mt-3 border-t border-gray-100">
+            <a href="/app" target="_blank" rel="noreferrer" className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-blue-600 bg-blue-50 hover:bg-blue-100 font-semibold transition-all">
+              <ExternalLink className="w-4 h-4" /> Open ERP Desk
+            </a>
           </div>
         </nav>
-        <div className="p-4 border-t border-gray-100">
-           <button onClick={logout} className="w-full py-2 text-danger font-medium hover:bg-danger/10 rounded-xl transition">Logout</button>
+        <div className="p-3 border-t border-gray-100">
+          <button onClick={logout} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 font-medium transition-all text-sm">
+            <LogOut className="w-4 h-4" /> Logout
+          </button>
         </div>
       </aside>
-      
-      <div className="flex-1 flex flex-col p-4 pl-0">
-        <header className="bg-white rounded-2xl shadow-clay mb-4 p-4 flex justify-between items-center border border-white">
-          <h2 className="text-lg font-bold text-gray-800 ml-2">Administration</h2>
-          <div className="flex items-center space-x-4 mr-2">
+
+      {/* Main area */}
+      <div className="flex-1 flex flex-col p-4 min-w-0">
+        <header className="bg-white rounded-2xl shadow-[6px_6px_12px_#d1d9e6,-4px_-4px_10px_#ffffff] border border-white/60 mb-4 px-5 py-3 flex justify-between items-center">
+          <h2 className="text-base font-bold text-gray-800">Administration</h2>
+          <div className="flex items-center gap-3">
             <div className="relative">
-              <input type="text" placeholder="Global Search (Ctrl+K)" className="w-64 pl-10 pr-4 py-2 rounded-xl bg-gray-50 border-none shadow-clay-inset focus:ring-2 focus:ring-primary text-sm outline-none" />
-              <svg className="w-4 h-4 text-gray-400 absolute left-4 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              <input type="text" placeholder="Search (Ctrl+K)" className="w-48 md:w-64 pl-9 pr-4 py-2 rounded-xl bg-gray-50 shadow-[inset_2px_2px_5px_#d1d9e6] text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+              <svg className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             </div>
-            <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">A</div>
+            <button className="relative w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center hover:bg-blue-50 transition">
+              <Bell className="w-4 h-4 text-gray-500" />
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">3</span>
+            </button>
+            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow text-white text-sm font-bold">
+              {fullName?.[0] || 'A'}
+            </div>
           </div>
         </header>
-        
-        <main className="flex-1 overflow-y-auto bg-white rounded-2xl shadow-clay p-6 border border-white">
+        <main className="flex-1 bg-white rounded-2xl shadow-[6px_6px_12px_#d1d9e6,-4px_-4px_10px_#ffffff] border border-white/60 p-6 overflow-y-auto">
           <Outlet />
         </main>
       </div>
@@ -84,56 +178,49 @@ const AdminLayout = () => {
   );
 };
 
-// Pages
-const Home = () => (
-  <div>
-    <section className="bg-white rounded-3xl shadow-clay p-12 text-center my-8 border border-white relative overflow-hidden">
-      <div className="relative z-10">
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Premium Healthcare, Delivered.</h1>
-        <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">Browse thousands of authentic medicines and wellness products with guaranteed fast delivery from our hospital pharmacy.</p>
-        <Link to="/medicines" className="bg-primary text-white px-8 py-3 rounded-xl font-medium shadow-clay hover:-translate-y-1 transition inline-block">Shop Medicines</Link>
-      </div>
-      <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
-      <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-accent/5 rounded-full blur-3xl"></div>
-    </section>
-  </div>
-);
-
+// ─── Placeholder Admin Dashboard ──────────────────────────────
 const AdminDashboard = () => (
   <div>
-    <h2 className="text-2xl font-bold mb-6 text-gray-800">Overview</h2>
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-      {['Today\'s Revenue', 'Orders', 'Customers', 'Low Stock'].map((kpi, idx) => (
-        <div key={idx} className="bg-gray-50 rounded-2xl p-6 shadow-clay-inset border border-white">
-          <h3 className="text-sm font-medium text-gray-500">{kpi}</h3>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{Math.floor(Math.random() * 500) + 10}</p>
+    <h2 className="text-2xl font-bold mb-6 text-gray-800">Dashboard Overview</h2>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      {[
+        ["Today's Revenue", "₹0", "blue"],
+        ["Orders Today", "0", "emerald"],
+        ["Low Stock", "0", "amber"],
+        ["Customers", "0", "violet"],
+      ].map(([label, val, color]) => (
+        <div key={label} className={`bg-${color}-50 border border-${color}-100 rounded-2xl p-5 shadow-[inset_3px_3px_6px_#d1d9e6]`}>
+          <p className={`text-xs font-semibold text-${color}-500 uppercase tracking-wide`}>{label}</p>
+          <p className={`text-2xl font-bold text-${color}-700 mt-1`}>{val}</p>
         </div>
       ))}
     </div>
+    <p className="text-gray-400 text-sm">Connect the backend API to populate live data.</p>
   </div>
 );
 
-// Removed inline AdminLogin component
-
-function App() {
+// ─── App ──────────────────────────────────────────────────────
+export default function App() {
   return (
     <BrowserRouter basename={import.meta.env.VITE_BASE_PATH || '/frontend'}>
       <Routes>
+        {/* Customer Portal */}
         <Route path="/" element={<PortalLayout />}>
-          <Route index element={<Home />} />
-          <Route path="medicines" element={<div>Medicine Catalog Placeholder</div>} />
+          <Route index element={<HomePage />} />
+          <Route path="medicines" element={<HomePage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
-        
+
+        {/* Standalone login */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin/login" element={<LoginPage />} />
-        
+
+        {/* Admin Portal */}
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
-          <Route path="*" element={<div className="text-gray-500">Module view rendering space.</div>} />
+          <Route path="*" element={<div className="text-gray-400 text-center py-16">Module coming soon…</div>} />
         </Route>
       </Routes>
     </BrowserRouter>
   );
 }
-
-export default App;

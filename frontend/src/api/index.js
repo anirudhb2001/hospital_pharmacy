@@ -1,33 +1,29 @@
+// Central Axios wrapper for all hospital_pharmacy API calls
 import axios from 'axios';
 
-// Base Axios instance
 export const api = axios.create({
   baseURL: '/',
-  withCredentials: true, // Crucial for Frappe session cookies (sid)
-  headers: {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  },
+  withCredentials: true,
+  headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
 });
 
-// Interceptor for handling CSRF or adding auth token if needed
 api.interceptors.request.use((config) => {
-  // Frappe automatically issues csrf_token cookie which we can extract if needed,
-  // but generally Frappe allows API calls via session cookie out of the box for same-origin.
-  if (window.csrf_token && window.csrf_token !== 'undefined') {
-    config.headers['X-Frappe-CSRF-Token'] = window.csrf_token;
-  }
+  const csrf = window.csrf_token;
+  if (csrf && csrf !== 'undefined') config.headers['X-Frappe-CSRF-Token'] = csrf;
   return config;
 });
 
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Handle global errors, e.g., 401 Unauthorized
-    if (error.response && error.response.status === 401) {
-      // Redirect to login or clear auth store
-      console.warn('Unauthorized. Session might have expired.');
-    }
-    return Promise.reject(error);
-  }
-);
+// Parse nested Frappe server messages for readable errors
+export function parseFrappeError(error) {
+  try {
+    const msgs = JSON.parse(error.response?.data?._server_messages || '[]');
+    if (msgs.length) return JSON.parse(msgs[0]).message;
+  } catch (_) { /**/ }
+  return error.response?.data?.exc_type || error.message || 'Something went wrong.';
+}
+
+// Convenience wrapper around Frappe's whitelisted method endpoint
+export async function callMethod(method, params = {}) {
+  const { data } = await api.post(`/api/method/${method}`, params);
+  return data.message;
+}

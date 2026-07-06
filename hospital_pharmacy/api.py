@@ -95,7 +95,12 @@ def get_medicine_filters():
 def get_portal_stats():
     """KPI stats for the public storefront homepage."""
     total = frappe.db.count("Medicine", {"status": "Active"})
-    available = frappe.db.count("Medicine", {"status": "Active", "current_stock": [">", 0]})
+    available = frappe.db.sql("""
+        SELECT COUNT(DISTINCT m.name)
+        FROM `tabMedicine` m
+        JOIN `tabBin` b ON m.item = b.item_code
+        WHERE m.status = 'Active' AND b.actual_qty > 0
+    """)[0][0]
     categories = frappe.db.sql(
         "SELECT COUNT(DISTINCT category) FROM `tabMedicine` WHERE status='Active'"
     )[0][0]
@@ -379,7 +384,7 @@ def get_dashboard_data():
     today = frappe.utils.today()
 
     sales_today = frappe.db.sql(
-        "SELECT IFNULL(sum(grand_total),0) FROM `tabSales Invoice` WHERE docstatus=1 AND posting_date=%s", (today,)
+        "SELECT IFNULL(sum(grand_total),0) FROM `tabSales Order` WHERE docstatus=1 AND transaction_date=%s", (today,)
     )
     
     pending_orders = frappe.db.count("Sales Order", {"docstatus": 1, "status": ["in", ["To Deliver and Bill", "To Deliver", "To Bill"]]})

@@ -13,6 +13,8 @@ import MyOrdersPage from './pages/portal/MyOrdersPage';
 import AdminNotifications from './pages/admin/AdminNotifications';
 import { useCartStore } from './stores/useCartStore';
 import { adminService } from './services';
+import { Navbar } from './components/layout/Navbar';
+import { Footer } from './components/layout/Footer';
 
 // ─── Auth Guards ──────────────────────────────────────────────
 const AdminRoute = ({ children }) => {
@@ -23,92 +25,17 @@ const AdminRoute = ({ children }) => {
 
 // ─── Portal Layout (customer-facing) ─────────────────────────
 const PortalLayout = () => {
-  const { isAuthenticated, fullName, logout } = useAuthStore();
-  const { getItemCount } = useCartStore();
   const [showAuthModal, setShowAuthModal] = React.useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f0f2f5]">
-      {/* ── Navbar ── */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-lg border-b border-white shadow-[0_2px_12px_#d1d9e620]">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-4">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow">
-              <span className="text-white text-xs font-bold">Rx</span>
-            </div>
-            <span className="font-bold text-gray-900 text-lg hidden sm:block">Hospital Pharmacy</span>
-          </Link>
-
-          {/* Nav links */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
-            <Link to="/" className="hover:text-blue-600 transition">Home</Link>
-            <Link to="/medicines" className="hover:text-blue-600 transition">Medicines</Link>
-            {isAuthenticated && (
-              <>
-                <Link to="/orders" className="hover:text-blue-600 transition">My Orders</Link>
-                <Link to="/profile" className="hover:text-blue-600 transition">Profile</Link>
-              </>
-            )}
-            <Link to="/admin/login" className="hover:text-blue-600 transition text-gray-400">Admin</Link>
-          </nav>
-
-          {/* Right actions */}
-          <div className="flex items-center gap-2">
-            {/* Cart */}
-            <Link to="/cart" className="relative w-9 h-9 rounded-xl bg-gray-50 shadow-[2px_2px_5px_#d1d9e6,-1px_-1px_4px_#ffffff] flex items-center justify-center hover:bg-blue-50 transition">
-              <ShoppingCart className="w-4 h-4 text-gray-600" />
-              {getItemCount() > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                  {getItemCount()}
-                </span>
-              )}
-            </Link>
-
-            {isAuthenticated ? (
-              <div className="flex items-center gap-2">
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-xl">
-                  <User className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="text-sm font-semibold text-blue-700 max-w-[120px] truncate">{fullName}</span>
-                </div>
-                <button
-                  onClick={logout}
-                  className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center hover:bg-red-100 transition"
-                  title="Logout"
-                >
-                  <LogOut className="w-4 h-4 text-red-500" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl shadow-[3px_3px_6px_#2563eb44] hover:bg-blue-700 hover:-translate-y-0.5 transition-all"
-              >
-                Login / Register
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* ── Main Content ── */}
-      <main className="flex-grow max-w-7xl w-full mx-auto px-4 md:px-6 py-6">
+    <div className="min-h-screen flex flex-col bg-slate-50 font-sans selection:bg-blue-200">
+      <Navbar onOpenAuthModal={() => setShowAuthModal(true)} />
+      
+      <main className="flex-grow w-full max-w-7xl mx-auto px-4 md:px-6 py-6">
         <Outlet />
       </main>
 
-      {/* ── Footer ── */}
-      <footer className="bg-white border-t border-gray-100 mt-8">
-        <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-gray-500">
-          <span>© 2026 Hospital Pharmacy. All rights reserved.</span>
-          <div className="flex gap-4">
-            <Link to="/" className="hover:text-blue-600 transition">Home</Link>
-            <Link to="/medicines" className="hover:text-blue-600 transition">Medicines</Link>
-            <Link to="/admin/login" className="hover:text-blue-600 transition">Staff Portal</Link>
-          </div>
-        </div>
-      </footer>
-
-      {/* Auth modal */}
+      <Footer />
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );

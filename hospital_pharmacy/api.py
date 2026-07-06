@@ -419,3 +419,62 @@ def search_everything(query):
         limit=5,
     )
     return {"medicines": medicines, "customers": customers}
+
+# ─────────────────────────────────────────────────────────────
+# CUSTOMER ORDERS API
+# ─────────────────────────────────────────────────────────────
+
+@frappe.whitelist()
+def get_customer_orders():
+    user = frappe.session.user
+    if user == "Guest":
+        return {"status": "error", "message": "Must be logged in to view orders"}
+        
+    customer = frappe.db.get_value("Customer", {"email_id": user}, "name")
+    if not customer:
+        user_doc = frappe.get_doc("User", user)
+        customer = frappe.db.get_value("Customer", {"customer_name": user_doc.full_name}, "name")
+        
+    if not customer:
+        return {"status": "success", "orders": []}
+        
+    orders = frappe.get_all("Sales Order",
+        filters={"customer": customer, "docstatus": ["<", 2]},
+        fields=["name", "transaction_date", "status", "delivery_status", "billing_status", "grand_total"],
+        order_by="creation desc"
+    )
+    
+    for o in orders:
+        items = frappe.db.sql('''
+            SELECT 
+                i.item_code, i.item_name, i.qty, i.rate, i.amount,
+                m.image, m.medicine_name, m.generic_name
+            FROM `tabSales Order Item` i
+            LEFT JOIN `tabMedicine` m ON i.item_code = m.item
+            WHERE i.parent = %s
+        ''', o.name, as_dict=1)
+        o["items"] = items
+        
+        # Calculate derived status
+        if o.status == "Cancelled":
+            o["payment_status"] = "Failed"
+            o["order_status"] = "Cancelled"
+        else:
+            if o.billing_status == "Fully Billed":
+                o["payment_status"] = "Paid"
+            elif o.billing_status == "Partly Billed":
+                o["payment_status"] = "Partially Paid"
+            else:
+                o["payment_status"] = "Pending"
+                
+            # Maps ERPNext status to consumer friendly terms
+            if o.delivery_status == "Fully Delivered":
+                o["order_status"] = "Delivered"
+            elif o.status == "To Deliver":
+                o["order_status"] = "Processing"
+            elif o.status == "To Deliver and Bill":
+                o["order_status"] = "Processing"
+            else:
+                o["order_status"] = "Confirmed"
+                
+    return {"status": "success", "orders": orders}

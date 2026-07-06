@@ -28,3 +28,8 @@ export const adminService = {
 };
 
 export { parseFrappeError };
+
+// ── Orders ────────────────────────────────────────────────────
+export const orderService = {
+  getOrders: () => callMethod('hospital_pharmacy.api.get_customer_orders'),
+};

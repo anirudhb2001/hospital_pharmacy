@@ -1,0 +1,129 @@
+{
+ "add_total_row": 0,
+ "add_translate_data": 0,
+ "columns": [
+  {
+   "fieldname": "medicine_name",
+   "fieldtype": "Data",
+   "label": "Medicine Name",
+   "width": 0
+  },
+  {
+   "fieldname": "available_stock",
+   "fieldtype": "Float",
+   "label": "Available Stock",
+   "width": 0
+  },
+  {
+   "fieldname": "purchase_invoice",
+   "fieldtype": "Link",
+   "options": "Purchase Invoice",
+   "label": "Purchase Invoice",
+   "width": 0
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "options": "Supplier",
+   "label": "Supplier",
+   "width": 0
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "options": "Sales Invoice",
+   "label": "Sales Invoice",
+   "width": 0
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "options": "Customer",
+   "label": "Customer",
+   "width": 0
+  },
+  {
+   "fieldname": "payment_status",
+   "fieldtype": "Data",
+   "label": "Payment Status",
+   "width": 0
+  }
+ ],
+ "creation": "2026-07-06 20:04:28.546952",
+ "disable_prepared_report_automation": 0,
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [
+  {
+   "fieldname": "medicine",
+   "fieldtype": "Link",
+   "label": "Medicine",
+   "mandatory": 0,
+   "options": "Medicine",
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "Supplier",
+   "mandatory": 0,
+   "options": "Supplier",
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "mandatory": 0,
+   "options": "Customer",
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Select",
+   "label": "From Date",
+   "mandatory": 0,
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date",
+   "mandatory": 0,
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "payment_status",
+   "fieldtype": "Select",
+   "label": "Payment Status",
+   "mandatory": 0,
+   "wildcard_filter": 0
+  }
+ ],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letter_head": null,
+ "modified": "2026-07-06 20:27:10.896859",
+ "modified_by": "Administrator",
+ "module": "Hospital Pharmacy",
+ "name": "Hospital Pharmacy Summary",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Medicine",
+ "reference_report": "",
+ "report_name": "Hospital Pharmacy Summary",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Pharmacist"
+  },
+  {
+   "role": "Pharmacy Manager"
+  }
+ ],
+ "timeout": 0
+}

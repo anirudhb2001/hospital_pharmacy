@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet, Navigate, Link, useNavigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { useQuery } from '@tanstack/react-query';
 import { ShoppingCart, Bell, User, LogOut, LayoutDashboard, ExternalLink } from 'lucide-react';
 import { useAuthStore } from './stores/useAuthStore';
@@ -8,6 +9,7 @@ import HomePage from './pages/portal/HomePage';
 import AuthModal from './components/AuthModal';
 import CartPage from './pages/portal/CartPage';
 import CheckoutPage from './pages/portal/CheckoutPage';
+import MyOrdersPage from './pages/portal/MyOrdersPage';
 import AdminNotifications from './pages/admin/AdminNotifications';
 import { useCartStore } from './stores/useCartStore';
 import { adminService } from './services';
@@ -141,23 +143,29 @@ const AdminLayout = () => {
         </div>
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto text-sm">
           {[
-            ['Dashboard', '/admin', '📊'],
-            ['Medicines', '/admin/medicines', '💊'],
-            ['Inventory', '/admin/inventory', '📦'],
-            ['Sales', '/admin/sales', '🧾'],
-            ['Purchases', '/admin/purchases', '🛒'],
-            ['Payments', '/admin/payments', '💳'],
-            ['Customers', '/admin/customers', '👥'],
-            ['Suppliers', '/admin/suppliers', '🏭'],
-            ['Analytics', '/admin/analytics', '📈'],
-            ['Reports', '/admin/reports', '📋'],
-            ['Notifications', '/admin/notifications', '🔔'],
-            ['Users', '/admin/users', '👤'],
-            ['Settings', '/admin/settings', '⚙️'],
-          ].map(([label, to, emoji]) => (
-            <Link key={to} to={to} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-gray-600 hover:bg-blue-50 hover:text-blue-700 font-medium transition-all">
-              <span>{emoji}</span> {label}
-            </Link>
+            ['Dashboard', '/admin', '📊', false],
+            ['Medicines', '/app/medicine', '💊', true],
+            ['Inventory', '/app/stock-ledger-entry', '📦', true],
+            ['Sales', '/app/sales-order', '🧾', true],
+            ['Purchases', '/app/purchase-order', '🛒', true],
+            ['Payments', '/app/payment-entry', '💳', true],
+            ['Customers', '/app/customer', '👥', true],
+            ['Suppliers', '/app/supplier', '🏭', true],
+            ['Analytics', '/app/dashboard', '📈', true],
+            ['Reports', '/app/List/Report', '📋', true],
+            ['Notifications', '/admin/notifications', '🔔', false],
+            ['Users', '/app/user', '👤', true],
+            ['Settings', '/app/system-settings', '⚙️', true],
+          ].map(([label, to, emoji, isExternal]) => (
+            isExternal ? (
+              <a key={label} href={to} target="_blank" rel="noreferrer" className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-gray-600 hover:bg-blue-50 hover:text-blue-700 font-medium transition-all">
+                <span>{emoji}</span> {label}
+              </a>
+            ) : (
+              <Link key={to} to={to} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-gray-600 hover:bg-blue-50 hover:text-blue-700 font-medium transition-all">
+                <span>{emoji}</span> {label}
+              </Link>
+            )
           ))}
           <div className="pt-3 mt-3 border-t border-gray-100">
             <a href="/app" target="_blank" rel="noreferrer" className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-blue-600 bg-blue-50 hover:bg-blue-100 font-semibold transition-all">
@@ -245,6 +253,7 @@ const AdminDashboard = () => {
 export default function App() {
   return (
     <BrowserRouter basename={import.meta.env.VITE_BASE_PATH || '/frontend'}>
+      <Toaster position="bottom-center" />
       <Routes>
         {/* Customer Portal */}
         <Route path="/" element={<PortalLayout />}>
@@ -252,6 +261,7 @@ export default function App() {
           <Route path="medicines" element={<HomePage />} />
           <Route path="cart" element={<CartPage />} />
           <Route path="checkout" element={<CheckoutPage />} />
+          <Route path="orders" element={<MyOrdersPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
 

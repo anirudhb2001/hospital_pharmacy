@@ -144,7 +144,7 @@ def admin_login(email, password):
 
         user_roles = frappe.get_roles(frappe.session.user)
         allowed_roles = [
-            "System Manager", "Hospital Administrator",
+            "Administrator", "System Manager", "Hospital Administrator",
             "Pharmacy Manager", "Pharmacist", "Cashier",
         ]
         if not any(role in allowed_roles for role in user_roles):

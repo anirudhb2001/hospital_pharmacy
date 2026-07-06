@@ -55,7 +55,7 @@ function MedicineCard({ medicine, onBuyNow }) {
         {/* Image */}
         <div className="relative overflow-hidden bg-gray-50 rounded-xl m-3 mb-0">
           <img
-            src={medicine.image ? `/${medicine.image}` : PLACEHOLDER_IMG}
+            src={medicine.image ? (medicine.image.startsWith('http') || medicine.image.startsWith('/') ? medicine.image : `/${medicine.image}`) : PLACEHOLDER_IMG}
             alt={medicine.medicine_name}
             className="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-500"
             onError={(e) => { e.target.src = PLACEHOLDER_IMG; }}

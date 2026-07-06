@@ -26,13 +26,13 @@ export default function LoginPage() {
       if (activeTab === 'customer') {
         const res = await api.post('/api/method/hospital_pharmacy.api.customer_login', { email: data.email, password: data.password });
         if(res.data.message.status === 'success') {
-          login(res.data.message.user, 'customer-token');
+          login(res.data.message.user, res.data.message.full_name, false);
           navigate('/');
         }
       } else if (activeTab === 'staff') {
         const res = await api.post('/api/method/hospital_pharmacy.api.admin_login', { email: data.email, password: data.password });
         if(res.data.message.status === 'success') {
-          login(res.data.message.user, 'admin-token');
+          login(res.data.message.user, res.data.message.full_name, true);
           navigate('/admin');
         }
       } else if (activeTab === 'register') {
@@ -113,8 +113,8 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-            <input name="email" type="email" required className="w-full px-4 py-3 rounded-xl bg-background shadow-clay-inset focus:ring-2 focus:ring-primary outline-none text-sm" />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Email Address or Username</label>
+            <input name="email" type="text" required className="w-full px-4 py-3 rounded-xl bg-background shadow-clay-inset focus:ring-2 focus:ring-primary outline-none text-sm" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>

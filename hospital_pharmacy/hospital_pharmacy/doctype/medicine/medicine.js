@@ -12,6 +12,33 @@ frappe.ui.form.on("Medicine", {
 		if (frm.doc.current_stock <= frm.doc.minimum_stock) {
 			frm.dashboard.add_comment("Warning", "Low stock alert!", "orange");
 		}
+		
+		if (!frm.is_new()) {
+			frm.add_custom_button('Update Stock', () => {
+				frappe.prompt([
+					{
+						fieldname: 'qty',
+						label: 'Quantity to Add',
+						fieldtype: 'Float',
+						reqd: 1
+					}
+				], (values) => {
+					frappe.call({
+						method: 'hospital_pharmacy.hospital_pharmacy.doctype.medicine.medicine.add_stock',
+						args: {
+							medicine: frm.doc.name,
+							qty: values.qty
+						},
+						callback: function(r) {
+							if (!r.exc) {
+								frm.reload_doc();
+								frappe.msgprint('Stock updated successfully');
+							}
+						}
+					});
+				}, 'Add Stock', 'Add');
+			});
+		}
 	},
 	selling_price(frm) {
 		if (frm.doc.selling_price && frm.doc.purchase_price && frm.doc.selling_price < frm.doc.purchase_price) {

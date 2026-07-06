@@ -9,7 +9,7 @@ import AuthModal from './components/AuthModal';
 // ─── Auth Guards ──────────────────────────────────────────────
 const AdminRoute = ({ children }) => {
   const { isAuthenticated, isAdmin } = useAuthStore();
-  if (!isAuthenticated) return <Navigate to="/admin/login" replace />;
+  if (!isAuthenticated || !isAdmin) return <Navigate to="/admin/login" replace />;
   return children;
 };
 

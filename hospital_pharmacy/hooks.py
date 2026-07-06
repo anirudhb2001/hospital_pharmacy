@@ -137,13 +137,11 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Bin": {
+		"on_update": "hospital_pharmacy.hospital_pharmacy.doctype.medicine.medicine.on_bin_update"
+	}
+}
 
 # Scheduled Tasks
 # ---------------

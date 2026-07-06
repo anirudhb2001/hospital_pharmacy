@@ -10,12 +10,14 @@ class Medicine(Document):
 		self.validate_prices()
 		self.validate_expiry()
 		
-	def before_save(self):
+	def on_update(self):
 		self.sync_with_item()
 
 	def validate_prices(self):
 		if self.selling_price and self.purchase_price and self.selling_price < self.purchase_price:
 			frappe.throw("Selling price cannot be lower than purchase price")
+		if self.mrp and self.selling_price and self.mrp < self.selling_price:
+			frappe.throw("MRP cannot be lower than selling price")
 
 	def validate_expiry(self):
 		if self.expiry_date and getdate(self.expiry_date) < getdate():
@@ -23,32 +25,47 @@ class Medicine(Document):
 
 	def sync_with_item(self):
 		self.ensure_item_group()
-		if not self.item:
-			item_code = self.name if self.name else frappe.generate_hash(length=10)
-			item = frappe.get_doc({
-				"doctype": "Item",
-				"item_code": item_code,
-				"item_name": self.medicine_name,
-				"item_group": "Medicine",
-				"stock_uom": self.unit or "Nos",
-				"is_stock_item": 1,
-				"has_batch_no": 1 if self.batch_number else 0,
-				"create_new_batch": 1 if self.batch_number else 0,
-				"valuation_rate": self.purchase_price,
-				"standard_rate": self.selling_price,
-				"description": self.description,
-			})
-			item.flags.ignore_permissions = True
-			item.insert(ignore_mandatory=True)
-			self.item = item.name
-		else:
-			item = frappe.get_doc("Item", self.item)
+		
+		# Ensure we have an item code
+		item_code = self.item or self.name or frappe.generate_hash(length=10)
+		
+		try:
+			is_new = False
+			if frappe.db.exists("Item", item_code):
+				item = frappe.get_doc("Item", item_code)
+			else:
+				item = frappe.new_doc("Item")
+				item.item_code = item_code
+				item.is_stock_item = 1
+				item.stock_uom = self.unit or "Nos"
+				is_new = True
+
+			# Update properties
 			item.item_name = self.medicine_name
+			item.item_group = "Medicine"
+			item.has_batch_no = 1 if self.batch_number else 0
+			item.create_new_batch = 1 if self.batch_number else 0
 			item.valuation_rate = self.purchase_price
 			item.standard_rate = self.selling_price
 			item.description = self.description
+			
+			# Bypass strict Frappe requirements for Item
 			item.flags.ignore_permissions = True
-			item.save(ignore_mandatory=True)
+			item.flags.ignore_mandatory = True
+			
+			if is_new:
+				item.insert()
+			else:
+				item.save()
+
+			# Link back to medicine if not linked yet
+			if self.item != item.name:
+				frappe.db.set_value("Medicine", self.name, "item", item.name, update_modified=False)
+				self.db_set("item", item.name, update_modified=False)
+
+		except Exception as e:
+			frappe.log_error(message=frappe.get_traceback(), title="Medicine Item Sync Failed")
+			frappe.throw(f"Failed to synchronize ERPNext Item for this Medicine. Error: {str(e)}")
 			
 	def ensure_item_group(self):
 		if not frappe.db.exists("Item Group", "Medicine"):
@@ -58,3 +75,48 @@ class Medicine(Document):
 				"item_group_name": "Medicine",
 				"parent_item_group": parent
 			}).insert(ignore_permissions=True)
+
+def on_bin_update(doc, method):
+	medicine = frappe.db.get_value("Medicine", {"item": doc.item_code}, "name")
+	if medicine:
+		total_stock = frappe.db.sql("SELECT sum(actual_qty) FROM tabBin WHERE item_code=%s", (doc.item_code,))[0][0] or 0
+		frappe.db.set_value("Medicine", medicine, "current_stock", total_stock)
+
+@frappe.whitelist()
+def add_stock(medicine, qty):
+	qty = float(qty)
+	if qty <= 0:
+		frappe.throw("Quantity must be positive")
+	
+	med_doc = frappe.get_doc("Medicine", medicine)
+	item_code = med_doc.item
+	if not item_code:
+		frappe.throw("Item not linked to this medicine")
+	
+	# Find a valid warehouse
+	company = frappe.defaults.get_user_default("Company") or frappe.db.get_value("Company", None, "name")
+	warehouse = frappe.db.get_value("Warehouse", {"is_group": 0, "company": company}, "name")
+	if not warehouse:
+		warehouse = frappe.db.get_value("Warehouse", {"is_group": 0}, "name")
+		
+	if not warehouse:
+		frappe.throw("No warehouse found to receive stock. Please create one.")
+	
+	se = frappe.new_doc("Stock Entry")
+	se.stock_entry_type = "Material Receipt"
+	
+	item_dict = {
+		"item_code": item_code,
+		"qty": qty,
+		"t_warehouse": warehouse,
+		"valuation_rate": med_doc.purchase_price or 1.0,
+	}
+	if med_doc.batch_number:
+		item_dict["batch_no"] = med_doc.batch_number
+		
+	se.append("items", item_dict)
+	se.insert(ignore_permissions=True)
+	se.submit()
+	
+	return se.name
+

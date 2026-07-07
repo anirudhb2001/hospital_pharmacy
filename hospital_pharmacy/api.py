@@ -247,6 +247,34 @@ def admin_login(email, password):
 # CHECKOUT API
 # ─────────────────────────────────────────────────────────────
 
+def get_fefo_batches(item_code, warehouse, required_qty):
+    batches = frappe.db.sql("""
+        SELECT sle.batch_no, SUM(sle.actual_qty) as qty, b.expiry_date
+        FROM `tabStock Ledger Entry` sle
+        JOIN `tabBatch` b ON sle.batch_no = b.name
+        WHERE sle.item_code = %s AND sle.warehouse = %s AND sle.is_cancelled=0
+        GROUP BY sle.batch_no, b.expiry_date
+        HAVING qty > 0
+        ORDER BY b.expiry_date ASC
+    """, (item_code, warehouse), as_dict=True)
+    
+    allocated = []
+    remaining = required_qty
+    for b in batches:
+        if remaining <= 0:
+            break
+        alloc_qty = min(remaining, b.qty)
+        allocated.append({
+            "batch_no": b.batch_no,
+            "qty": alloc_qty
+        })
+        remaining -= alloc_qty
+        
+    if remaining > 0:
+        frappe.throw(f"Insufficient batch stock for {item_code}. Required {required_qty}, found {required_qty - remaining}")
+        
+    return allocated
+
 @frappe.whitelist()
 def place_order(items, address, phone, notes, payment_method):
     try:
@@ -340,6 +368,25 @@ def place_order(items, address, phone, notes, payment_method):
                     }
                 }, ignore_permissions=True))
                 si.update_stock = 1
+                
+                original_items = si.get("items")
+                si.set("items", [])
+                
+                for item in original_items:
+                    has_batch = frappe.db.get_value("Item", item.item_code, "has_batch_no")
+                    if has_batch:
+                        allocated = get_fefo_batches(item.item_code, item.warehouse, item.qty)
+                        for alloc in allocated:
+                            item_dict = item.as_dict()
+                            item_dict.update({
+                                "name": None,
+                                "qty": alloc["qty"],
+                                "batch_no": alloc["batch_no"]
+                            })
+                            si.append("items", item_dict)
+                    else:
+                        si.append("items", item.as_dict())
+                
                 si.flags.ignore_permissions = True
                 si.insert()
                 si.submit()

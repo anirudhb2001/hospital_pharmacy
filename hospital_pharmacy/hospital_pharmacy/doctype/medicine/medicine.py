@@ -43,8 +43,9 @@ class Medicine(Document):
 			# Update properties
 			item.item_name = self.medicine_name
 			item.item_group = "Medicine"
-			item.has_batch_no = 1 if self.batch_number else 0
-			item.create_new_batch = 1 if self.batch_number else 0
+			item.has_batch_no = 1
+			item.has_expiry_date = 1
+			item.create_new_batch = 0
 			item.valuation_rate = self.purchase_price
 			item.standard_rate = self.selling_price
 			item.description = self.description
@@ -83,7 +84,7 @@ def on_bin_update(doc, method):
 		frappe.db.set_value("Medicine", medicine, "current_stock", total_stock)
 
 @frappe.whitelist()
-def add_stock(medicine, qty):
+def add_stock(medicine, qty, batch_no=None, expiry_date=None):
 	qty = float(qty)
 	if qty <= 0:
 		frappe.throw("Quantity must be positive")
@@ -111,8 +112,19 @@ def add_stock(medicine, qty):
 		"t_warehouse": warehouse,
 		"valuation_rate": med_doc.purchase_price or 1.0,
 	}
-	if med_doc.batch_number:
-		item_dict["batch_no"] = med_doc.batch_number
+	
+	if batch_no:
+		if not frappe.db.exists("Batch", batch_no):
+			if not expiry_date:
+				frappe.throw("Expiry Date is required to create a new batch.")
+			batch = frappe.new_doc("Batch")
+			batch.batch_id = batch_no
+			batch.item = item_code
+			batch.expiry_date = expiry_date
+			batch.flags.ignore_permissions = True
+			batch.insert()
+			
+		item_dict["batch_no"] = batch_no
 		
 	se.append("items", item_dict)
 	se.insert(ignore_permissions=True)

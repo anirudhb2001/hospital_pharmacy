@@ -21,13 +21,27 @@ frappe.ui.form.on("Medicine", {
 						label: 'Quantity to Add',
 						fieldtype: 'Float',
 						reqd: 1
+					},
+					{
+						fieldname: 'batch_no',
+						label: 'Batch Number',
+						fieldtype: 'Data',
+						reqd: 1
+					},
+					{
+						fieldname: 'expiry_date',
+						label: 'Expiry Date',
+						fieldtype: 'Date',
+						reqd: 1
 					}
 				], (values) => {
 					frappe.call({
 						method: 'hospital_pharmacy.hospital_pharmacy.doctype.medicine.medicine.add_stock',
 						args: {
 							medicine: frm.doc.name,
-							qty: values.qty
+							qty: values.qty,
+							batch_no: values.batch_no,
+							expiry_date: values.expiry_date
 						},
 						callback: function(r) {
 							if (!r.exc) {
